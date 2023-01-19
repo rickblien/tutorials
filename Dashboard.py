@@ -18,6 +18,18 @@ import yfinance as yf
 # import pandas as pd
 from datetime import date
 
+# Fundamental_Data container libraries
+from datetime import datetime
+import datetime as dt
+import pandas_datareader.data as reader
+import lxml
+from lxml import html
+import requests
+import numpy as np
+# import pandas as pd
+# import yfinance as yf
+# import yahoo_fin.stock_info as si
+
 
 pd.set_option('display.max_colwidth', -1)
 pd.set_option('expand_frame_repr', False)
@@ -32,6 +44,7 @@ st.set_page_config(
 # CONTAINERS
 header = st.container()
 stock_chart = st.container()
+fundamental_data = st.container()
 dcf_valuation = st.container()
 
 
@@ -128,13 +141,118 @@ with stock_chart:
         with st.expander(stock + " Stock Chart", expanded=True ):
             st.plotly_chart(fig, expanded=False, use_container_width=True)
 
-# DCF VALUATION
-with dcf_valuation:
-    #### DISCOUNT RATE (WACC) ####
-    ### Cost of Equity ###
+# FUNDAMENTAL DATA
+with fundamental_data:
+    # Get Yahoo page
+    def get_page(url):
+    # Set up the request headers that we're going to use, to simulate
+    # a request by the Chrome browser. Simulating a request from a browser
+    # is generally good practice when building a scraper
+        headers = {
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Cache-Control': 'max-age=0',
+            'Connection': 'close',
+            'DNT': '1', # Do Not Track Request Header 
+            'Pragma': 'no-cache',
+            'Referrer': 'https://google.com',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36'
+        }
 
-    ## Risk Free Rate ##
+        return requests.get(url, headers=headers)
 
-    # Scrape counties 10 years bond rate
+    # yahoo parse rows
+    def parse_rows(table_rows):
+        parsed_rows = []
 
-    # 
+        for table_row in table_rows:
+            parsed_row = []
+            el = table_row.xpath("./div")
+
+            none_count = 0
+
+            for rs in el:
+                try:
+                    (text,) = rs.xpath('.//span/text()[1]')
+                    parsed_row.append(text)
+                except ValueError:
+                    parsed_row.append(np.NaN)
+                    none_count += 1
+
+            if (none_count < 4):
+                parsed_rows.append(parsed_row)
+                
+        return pd.DataFrame(parsed_rows)
+
+    # yahoo clean data
+    def clean_data(df):
+        df = df.set_index(0) # Set the index to the first column: 'Period Ending'.
+        df = df.transpose() # Transpose the DataFrame, so that our header contains the account names
+        
+        # Rename the "Breakdown" column to "Date"
+        cols = list(df.columns)
+        cols[0] = 'Date'
+        df = df.set_axis(cols, axis='columns', inplace=False)
+        
+        numeric_columns = list(df.columns)[1::] # Take all columns, except the first (which is the 'Date' column)
+
+        for column_index in range(1, len(df.columns)): # Take all columns, except the first (which is the 'Date' column)
+            df.iloc[:,column_index] = df.iloc[:,column_index].str.replace(',', '') # Remove the thousands separator
+            df.iloc[:,column_index] = df.iloc[:,column_index].astype(np.float64) # Convert the column to float64
+            
+        return df
+
+    # yahoo scrape table
+    def scrape_table(url):
+        # Fetch the page that we're going to parse
+        page = get_page(url);
+
+        # Parse the page with LXML, so that we can start doing some XPATH queries
+        # to extract the data that we want
+        tree = html.fromstring(page.content)
+
+        # Fetch all div elements which have class 'D(tbr)'
+        table_rows = tree.xpath("//div[contains(@class, 'D(tbr)')]")
+        
+        # Ensure that some table rows are found; if none are found, then it's possible
+        # that Yahoo Finance has changed their page layout, or have detected
+        # that you're scraping the page.
+        assert len(table_rows) > 0
+        
+        df = parse_rows(table_rows)
+        df = clean_data(df)
+            
+        return df
+
+    # Get ticker list
+    sp500_tickers = si.tickers_sp500()
+    nasdaq_tickers = si.tickers_nasdaq()
+    dow_tickers = si.tickers_dow()
+    other_tickers = si.tickers_other()
+    usa_tickers = sp500_tickers + nasdaq_tickers + dow_tickers + other_tickers
+    usa_tickers.insert(0, 'All')
+
+    # Dropdown box for ticker bar
+    selected_option = st.multiselect(
+        label='Enter ticker below',
+        options=usa_tickers,
+        default=["TSLA"],
+        )
+
+    if "All" in selected_option:
+        selected_option = usa_tickers[1:]
+
+    for stock in selected_option:
+        # Get yahoo Balance Sheet
+        balance_sheet = scrape_table('https://finance.yahoo.com/quote/' + stock + '/balance-sheet?p=' + stock)
+        balance_sheet
+
+        # # Get yahoo Income Statement
+        income_statement = scrape_table('https://finance.yahoo.com/quote/' + stock + '/financials?p=' + stock)
+        income_statement
+
+        # # Get yahoo Cash Flow
+        cash_flow = scrape_table('https://finance.yahoo.com/quote/' + stock + '/cash-flow?p=' + stock)
+        cash_flow
+
