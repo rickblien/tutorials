@@ -244,15 +244,244 @@ with fundamental_data:
         selected_option = usa_tickers[1:]
 
     for stock in selected_option:
-        # Get yahoo Balance Sheet
-        balance_sheet = scrape_table('https://finance.yahoo.com/quote/' + stock + '/balance-sheet?p=' + stock)
-        balance_sheet
+        # Get Risk Free Rate
+        countries_10_years_bond_rate = pd.read_html("http://www.worldgovernmentbonds.com/", header=0)[1]
 
-        # # Get yahoo Income Statement
-        income_statement = scrape_table('https://finance.yahoo.com/quote/' + stock + '/financials?p=' + stock)
-        income_statement
+        if stock.endswith(('.SS', '.SZ')):
+            # China 10 years bond
+            filter_china_10y_bond = (countries_10_years_bond_rate['Unnamed: 1'] == 'China')
+            china_10years_bond = countries_10_years_bond_rate[filter_china_10y_bond]
+            china_10years_bond = china_10years_bond.iloc[0]['10Y Bond'] 
+            china_10years_bond = float(china_10years_bond.replace("%","")) /100
+            # st.write("china_10years_bond = {}".format(china_10years_bond))
 
-        # # Get yahoo Cash Flow
-        cash_flow = scrape_table('https://finance.yahoo.com/quote/' + stock + '/cash-flow?p=' + stock)
-        cash_flow
+            # China Default Spread
+            filter_china_default_spread = (countries_10_years_bond_rate['Unnamed: 1'] == 'China')
+            china_default_spread = countries_10_years_bond_rate[filter_china_default_spread]
+            china_default_spread = china_default_spread.iloc[0]['Spread vs.1']
+            china_default_spread = float(china_default_spread.replace("bp","")) /10000
+            # print("china_default_spread = {}".format(china_default_spread)) 
 
+            # China Risk Free Rate
+            risk_free_rate = china_10years_bond - china_default_spread
+            # st.write("risk_free_rate = {}".format(risk_free_rate))
+            st.write("China's Risk Free Rate")
+            st.write(risk_free_rate)
+
+        else:
+            # USA 10 years bond
+            filter_usa_10years_bond = (countries_10_years_bond_rate['Unnamed: 1'] == 'United States')
+            usa_10years_bond = countries_10_years_bond_rate[filter_usa_10years_bond]
+            usa_10years_bond = usa_10years_bond.iloc[0]['10Y Bond'] 
+            usa_10years_bond = float(usa_10years_bond.replace("%","")) /100
+            # print("usa_10years_bond = {}".format(usa_10years_bond))
+
+            # USA Risk Free Rate
+            risk_free_rate = usa_10years_bond
+            # print("risk_free_rate = {}".format(risk_free_rate))
+            st.write("USA's Risk Free Rate")
+            st.write(risk_free_rate)
+
+        # get balance sheet
+        try:
+            df_balance_sheet = scrape_table('https://finance.yahoo.com/quote/' + stock + '/balance-sheet?p=' + stock)
+            df_balance_sheet = df_balance_sheet.set_index('Date')
+            st.write(stock + ' Balance Sheet')
+            df_balance_sheet
+        except:
+            st.write(stock + ' balance sheet failed')
+            pass 
+
+        # get income statement
+        try:
+            df_income_statement = scrape_table('https://finance.yahoo.com/quote/' + stock + '/financials?p=' + stock)
+            df_income_statement = df_income_statement.set_index('Date')
+            st.write(stock + ' Income Statement')
+            df_income_statement
+        except:
+            st.write(stock + ' income statement failed')
+            pass 
+
+        # get cash flow statement
+        try:
+            df_cash_flow = scrape_table('https://finance.yahoo.com/quote/' + stock + '/cash-flow?p=' + stock)
+            df_cash_flow = df_cash_flow.set_index('Date')
+            st.write(stock + ' Cash Flow Statement')
+            df_cash_flow
+        except:
+            st.write(stock + ' cash flow statement failed')
+            pass
+
+        # Get quote table
+        try:
+            quote = si.get_quote_table(stock) 
+            # st.write(quote)
+        except:
+            pass
+
+        # Get Beta
+        try:
+            st.text('Beta')
+            beta = float(quote['Beta (5Y Monthly)'])
+            st.write(beta)
+        except:
+            pass
+
+        # get Market Cap
+        try:
+            st.write('Market Cap')
+            mc = str(quote['Market Cap'])
+            if mc[-1] == 'T':
+                fmc = float(mc.replace('T',''))
+                marketCap = fmc*1000000000000
+                st.write(marketCap)
+            elif mc[-1] == 'B':
+                fmc = float(mc.replace('B',''))
+                marketCap = fmc*1000000000
+                st.write(marketCap)
+            elif mc[-1] == 'M':
+                fmc = float(mc.replace('M',''))
+                marketCap = fmc*1000000
+                st.write(marketCap) 
+        except:
+            pass
+
+        # Get Total Debt
+        try:
+            Total_Debt = df_balance_sheet['Total Debt'][0]
+            st.write(stock + ' Total Debt')
+            st.write(Total_Debt)
+        except:
+            st.write(stock + ' Total Debt Failed!')
+            pass
+
+        # Calculate Weight of Equity
+        try:
+            Weight_of_Equity = marketCap / (marketCap + Total_Debt)
+            st.write(stock + ' Weight of Equity')
+            st.write(Weight_of_Equity)
+        except:
+            st.write(stock + ' Weight of Equity Failed!')
+            pass 
+
+        # Calculate Weight of Debt
+        try:
+            Weight_of_Debt = Total_Debt / (marketCap + Total_Debt)
+            st.write(stock + ' Weight of Debt')
+            st.write(Weight_of_Debt)                
+        except:
+            st.write(stock + ' Weight of Debt Failed!')
+            pass
+
+        # Get Interest Expense  
+        try:
+            Interest_Expenses = df_income_statement['Interest Expense'][0]
+            st.write(stock + ' Interest Expense')
+            st.write(Interest_Expenses)
+        except:
+            st.write(stock + ' Interest Expense Failed!')
+            pass
+
+        # Get Income Tax Expense
+        try:
+            Income_Tax_Expense = df_income_statement['Tax Provision'][0]
+            st.write(stock + ' Income_Tax_Expense')
+            st.write(Income_Tax_Expense)                
+        except:
+            st.write(stock + ' Income Tax Expense Failed!')
+            pass 
+
+        # Get Income Before Tax
+        try:
+            Income_Before_Tax = df_income_statement['Pretax Income'][0]
+            st.write(stock + ' Income_Before_Tax')
+            st.write(Income_Before_Tax)                
+        except:
+            st.write(stock + ' Income_Before_Tax Failed')
+            pass 
+
+        # Calculate effective tax rate
+        try:
+            Effective_Tax_Rate = Income_Tax_Expense / Income_Before_Tax
+            st.write(stock + ' Effective Tax Rate')
+            st.write(Effective_Tax_Rate)
+        except:
+            st.write(stock + ' Effective Tax Rate Failed')
+            pass
+        
+        # Interest Coverage Ratio (Estimating Synthetic Ratings) = EBIT / Interest Expenses
+
+
+        # Discount Rate (WACC)
+        # try:
+        #     Discount_Rate_WACC = (Weight_of_Equity * Cost_of_Equity) + (Weight_of_Debt * Cost_of_Debt) * (1 - Effective_Tax_Rate)
+        # except:
+        #     pass 
+
+        # Analyst Growth Estimate
+        try:
+            stock = stock.upper()
+            analysts = si.get_analysts_info(stock)
+            analysts_growth_estimate = analysts['Growth Estimates'][stock][5]
+            analysts_growth_estimate = float(analysts_growth_estimate.replace("%","")) /100
+            st.write(stock + ' Analysts Growth Estimate')
+            st.write(analysts_growth_estimate)
+        except:
+            st.write(stock + ' Analysts Growth Estimate Failed')
+            pass
+
+        # Symbol current price
+        try:
+            current_price = si.get_live_price(stock)
+            st.write(stock + ' Current Price')
+            st.write(current_price)
+        except:
+            st.write(stock + ' current price failed')
+            pass
+
+        # ttm cash flow
+        try:
+            ttm_cashflow = current_price * risk_free_rate
+            st.write(stock + ' ttm cashflow')
+            st.write(ttm_cashflow)
+        except:
+            st.write(stock + ' ttm cashflow failed')
+            pass
+
+        # projected cashflow
+        try:
+            years = [1,2,3,4,5]
+            futurefreecashflow = []
+            for year in years:
+                cashflow = ttm_cashflow * (1 + analysts_growth_estimate)**year
+                futurefreecashflow.append(cashflow)
+            st.write(stock + ' projected cashflow statement')
+            st.write(futurefreecashflow)
+        except:
+            st.write(stock + ' projected cashflow failed')
+            pass
+
+        # Expected Return on symbol
+        try:
+            from scipy import optimize
+
+            def fun(r):
+                r1 = 1 + r
+                return futurefreecashflow[0]/r1 +  futurefreecashflow[1]/r1**2 + futurefreecashflow[2]/r1**3 + futurefreecashflow[3]/r1**4 + futurefreecashflow[4]/r1**5 * (1 + (1+risk_free_rate)/(r-risk_free_rate)) - current_price
+
+            roots = optimize.root(fun, [.1])
+            expected_return_on_stock = float(roots.x)
+            st.write(stock + ' Expected Return on Stock')
+            st.write(expected_return_on_stock)
+        except:
+            st.write(stock + ' Expected Return on Stock failed')
+            pass
+        
+        # Implied Equity Risk Premium
+        try:
+            implied_equity_risk_premium = expected_return_on_stock - risk_free_rate
+            st.write(stock + ' Implied Equity Risk Premium')
+            st.write(implied_equity_risk_premium)
+        except:
+            st.write(stock + ' implied equity rick premium failed')
+            pass 
