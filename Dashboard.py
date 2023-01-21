@@ -41,17 +41,14 @@ st.set_page_config(
     page_icon="🇺🇸"
 )
 
-# CONTAINERS
-header = st.container()
-stock_chart = st.container()
-fundamental_data = st.container()
-dcf_valuation = st.container()
+st.title('QUANTSTACKS')
 
+tab1, tab2, tab3 = st.tabs(["Market Overview", "News", "Potential Target"])
 
-# HEADER CONTAINER
-with header:
-    st.title('QuantStacks Beta')
-    # st.header('Buffett Indicator')
+# Market Overview
+with tab1:
+    # Buffett Indicator
+    st.header("Buffett Indicator")
 
     # Pull Whilshire 5000 Price data
     wilshire_price = fred.get_series('WILL5000PR', observation_start='1970-01-01')
@@ -81,157 +78,91 @@ with header:
     plt.axhline(stats['75%'], label='75%', c='r')
     plt.legend()
 
-    with st.expander('Buffett Indicator'):
+    with st.expander('Buffett Indicator', expanded=True):
         st.pyplot(plt)
 
-# STOCK_CHART CONTAINER
-with stock_chart:
-    # Get ticker list
-    sp500_tickers = si.tickers_sp500()
-    nasdaq_tickers = si.tickers_nasdaq()
-    dow_tickers = si.tickers_dow()
-    other_tickers = si.tickers_other()
-    usa_tickers = sp500_tickers + nasdaq_tickers + dow_tickers + other_tickers
-    usa_tickers.insert(0, 'Spy')
-    usa_tickers.insert(1, 'All')
+    # S&P 500 Chart
+    st.header('S&P 500 Index')
+    # S&P 500 Chart Libraries
+    import yfinance as yf
+    import plotly.graph_objs as go
 
-    # Dropdown box for ticker bar
-    selected_option = st.multiselect(
-        label='Enter ticker below',
-        options=usa_tickers,
-        default=["Spy"],
-        )
+    # S&P 500 ticker
+    stock = '^GSPC'
+    data = yf.download(tickers=stock, period='1d', interval='1m')
+    data.tail()
 
-    if "All" in selected_option:
-        selected_option = usa_tickers[1:]
+    # S&P 500 Chart
+    fig = go.Figure()
+    fig.add_trace(go.Candlestick(
+        x=data.index,
+        open=data['Open'],
+        high=data['High'],
+        low=data['Low'],
+        close=data['Close'],
+        name ='market data'
+        ))
 
-    for stock in selected_option:
-        df = yf.download(stock, period='max')
+    fig.update_layout(
+        title = 'Live Market Data',
+        yaxis_title = 'Stock Price (per share)')
 
-        # Get yahoo minute data
-        data = yf.download(tickers=stock, period='1d', interval='1m')
+    fig.update_xaxes(
+        rangeslider_visible = True,
+        rangeselector = dict(
+        buttons = list([
+            dict(count = 1, label='1m', step='minute', stepmode='backward'),
+            dict(count = 5, label='5m', step='minute', stepmode='backward'),
+            dict(count = 15, label='15m', step='minute', stepmode='backward'),
+            dict(count = 30, label='30m', step='minute', stepmode='backward'),
+            dict(count = 1, label='HTD', step='hour', stepmode='todate')
+        ])))
+    # st.plotly_chart(fig, use_container_width=True)
+    with st.expander(stock + " Stock Chart", expanded=True ):
+        st.plotly_chart(fig, expanded=False, use_container_width=True)
+# News
+with tab2:
+   st.header("News")
+   st.write('Coming soon!')
 
-        # Graph stock chart
-        fig = go.Figure()
-        fig.add_trace(go.Candlestick(
-            x=data.index,
-            open=data['Open'],
-            high=data['High'],
-            low=data['Low'],
-            close=data['Close'],
-            name ='market data'
-            ))
+# Potential Target
+with tab3:
+    st.header("Potential Target")
 
-        fig.update_layout(
-            title = stock,
-            yaxis_title = 'Stock Price (per share)')
+    # SEARCH BAR
+    # Get tickers list
+    from yahoo_fin import stock_info as si
+    import pandas as pd
 
-        fig.update_xaxes(
-            rangeslider_visible = True,
-            rangeselector = dict(
-            buttons = list([
-                dict(count = 1, label='1m', step='minute', stepmode='backward'),
-                dict(count = 5, label='5m', step='minute', stepmode='backward'),
-                dict(count = 15, label='15m', step='minute', stepmode='backward'),
-                dict(count = 30, label='30m', step='minute', stepmode='backward'),
-                dict(count = 1, label='HTD', step='hour', stepmode='todate')
-            ])))
-        
-        # st.plotly_chart(fig, use_container_width=True)
-        with st.expander(stock + " Stock Chart", expanded=True ):
-            st.plotly_chart(fig, expanded=False, use_container_width=True)
+    # Get USA ticker list
+    df1 = pd.DataFrame(si.tickers_sp500())
+    df2 = pd.DataFrame(si.tickers_nasdaq())
+    df3 = pd.DataFrame(si.tickers_dow())
+    df4 = pd.DataFrame(si.tickers_other())
 
-# FUNDAMENTAL DATA
-with fundamental_data:
-    # Get Yahoo page
-    def get_page(url):
-    # Set up the request headers that we're going to use, to simulate
-    # a request by the Chrome browser. Simulating a request from a browser
-    # is generally good practice when building a scraper
-        headers = {
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Cache-Control': 'max-age=0',
-            'Connection': 'close',
-            'DNT': '1', # Do Not Track Request Header 
-            'Pragma': 'no-cache',
-            'Referrer': 'https://google.com',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36'
-        }
+    # convert DataFrame to list, then to sets
+    sym1 = set(symbol for symbol in df1[0].tolist())
+    sym2 = set(symbol for symbol in df2[0].tolist())
+    sym3 = set(symbol for symbol in df3[0].tolist())
+    sym4 = set(symbol for symbol in df4[0].tolist())
 
-        return requests.get(url, headers=headers)
+    # join the 4 sets into one. Because it's a set, there will be no duplicate symbols
+    symbols = set.union(sym1, sym2, sym3, sym4)
 
-    # yahoo parse rows
-    def parse_rows(table_rows):
-        parsed_rows = []
+    # some stocks are 5 characters. Those stocks with the suffixes listed below are not of interest
+    my_list = ['W', 'R', 'P', 'Q']
+    del_set = set()
+    sav_set = set()
 
-        for table_row in table_rows:
-            parsed_row = []
-            el = table_row.xpath("./div")
-
-            none_count = 0
-
-            for rs in el:
-                try:
-                    (text,) = rs.xpath('.//span/text()[1]')
-                    parsed_row.append(text)
-                except ValueError:
-                    parsed_row.append(np.NaN)
-                    none_count += 1
-
-            if (none_count < 4):
-                parsed_rows.append(parsed_row)
-                
-        return pd.DataFrame(parsed_rows)
-
-    # yahoo clean data
-    def clean_data(df):
-        df = df.set_index(0) # Set the index to the first column: 'Period Ending'.
-        df = df.transpose() # Transpose the DataFrame, so that our header contains the account names
-        
-        # Rename the "Breakdown" column to "Date"
-        cols = list(df.columns)
-        cols[0] = 'Date'
-        df = df.set_axis(cols, axis='columns', inplace=False)
-        
-        numeric_columns = list(df.columns)[1::] # Take all columns, except the first (which is the 'Date' column)
-
-        for column_index in range(1, len(df.columns)): # Take all columns, except the first (which is the 'Date' column)
-            df.iloc[:,column_index] = df.iloc[:,column_index].str.replace(',', '') # Remove the thousands separator
-            df.iloc[:,column_index] = df.iloc[:,column_index].astype(np.float64) # Convert the column to float64
-            
-        return df
-
-    # yahoo scrape table
-    def scrape_table(url):
-        # Fetch the page that we're going to parse
-        page = get_page(url);
-
-        # Parse the page with LXML, so that we can start doing some XPATH queries
-        # to extract the data that we want
-        tree = html.fromstring(page.content)
-
-        # Fetch all div elements which have class 'D(tbr)'
-        table_rows = tree.xpath("//div[contains(@class, 'D(tbr)')]")
-        
-        # Ensure that some table rows are found; if none are found, then it's possible
-        # that Yahoo Finance has changed their page layout, or have detected
-        # that you're scraping the page.
-        assert len(table_rows) > 0
-        
-        df = parse_rows(table_rows)
-        df = clean_data(df)
-            
-        return df
-
-    # Get ticker list
-    sp500_tickers = si.tickers_sp500()
-    nasdaq_tickers = si.tickers_nasdaq()
-    dow_tickers = si.tickers_dow()
-    other_tickers = si.tickers_other()
-    usa_tickers = sp500_tickers + nasdaq_tickers + dow_tickers + other_tickers
-    usa_tickers.insert(0, 'All')
+    for symbol in symbols:
+        if len( symbol ) > 4 and symbol[-1] in my_list:
+            del_set.add( symbol )
+        else:
+            sav_set.add( symbol )
+    
+    sav_set = sorted(sav_set)
+    sav_set.insert(0, 'ALL')
+    usa_tickers = sav_set
 
     # Dropdown box for ticker bar
     selected_option = st.multiselect(
@@ -243,50 +174,190 @@ with fundamental_data:
     if "All" in selected_option:
         selected_option = usa_tickers[1:]
 
-    # for stock in selected_option:
+    # DCF VALUATION
     def dcf_valuation(stock):
         try:
-            try:
-                # Get Risk Free Rate
-                countries_10_years_bond_rate = pd.read_html("http://www.worldgovernmentbonds.com/", header=0)[1]
+            # Calculate: risk_free_rate
+            def risk_free_rate(country_option):
+                try:
+                    # Filter out selected country 10 years bond
+                    filter_country_10y_bond = (countries_10_years_bond_rate['country_name'] == country_option)
+                    country_10years_bond = countries_10_years_bond_rate[filter_country_10y_bond]
+                    country_10years_bond = country_10years_bond.iloc[0]['10y_bond'] 
+                    country_10years_bond = float(country_10years_bond.replace("%","")) /100
+                    # st.write(country_10years_bond)
 
-                if stock.endswith(('.SS', '.SZ')):
-                    # China 10 years bond
-                    filter_china_10y_bond = (countries_10_years_bond_rate['Unnamed: 1'] == 'China')
-                    china_10years_bond = countries_10_years_bond_rate[filter_china_10y_bond]
-                    china_10years_bond = china_10years_bond.iloc[0]['10Y Bond'] 
-                    china_10years_bond = float(china_10years_bond.replace("%","")) /100
-                    # st.write("china_10years_bond = {}".format(china_10years_bond))
+                    # Calculate Default Spread
+                    # st.header('Default Spread')
+                    # st.write("Country Default Spread = Country 10 Years Bond - USA 10 Years Bond")
 
-                    # China Default Spread
-                    filter_china_default_spread = (countries_10_years_bond_rate['Unnamed: 1'] == 'China')
-                    china_default_spread = countries_10_years_bond_rate[filter_china_default_spread]
-                    china_default_spread = china_default_spread.iloc[0]['Spread vs.1']
-                    china_default_spread = float(china_default_spread.replace("bp","")) /10000
-                    # print("china_default_spread = {}".format(china_default_spread)) 
-
-                    # China Risk Free Rate
-                    risk_free_rate = china_10years_bond - china_default_spread
-                    # st.write("risk_free_rate = {}".format(risk_free_rate))
-                    # st.write("China's Risk Free Rate")
-                    # st.write(risk_free_rate)
-
-                else:
                     # USA 10 years bond
-                    filter_usa_10years_bond = (countries_10_years_bond_rate['Unnamed: 1'] == 'United States')
+                    filter_usa_10years_bond = (countries_10_years_bond_rate['country_name'] == 'United States')
                     usa_10years_bond = countries_10_years_bond_rate[filter_usa_10years_bond]
-                    usa_10years_bond = usa_10years_bond.iloc[0]['10Y Bond'] 
+                    usa_10years_bond = usa_10years_bond.iloc[0]['10y_bond'] 
                     usa_10years_bond = float(usa_10years_bond.replace("%","")) /100
-                    # print("usa_10years_bond = {}".format(usa_10years_bond))
+                    # st.write('USA 10 years bond is below')
+                    # st.write(usa_10years_bond)
 
-                    # USA Risk Free Rate
-                    risk_free_rate = usa_10years_bond
-                    # print("risk_free_rate = {}".format(risk_free_rate))
-                    # st.write("USA's Risk Free Rate")
-                    # st.write(risk_free_rate)
+                    # Selected Country Default Spread
+                    country_default_spread_usd = country_10years_bond - usa_10years_bond
+                    # st.write('Selected Country Default Spread is below')
+                    # st.write(country_default_spread_usd)
+                    # st.write("Country Default Spread = Country 10 Years Bond - USA 10 Years Bond")
+
+                    # Calculate Selected Country Risk Free Rate
+                    country_risk_free_rate = usa_10years_bond - country_default_spread_usd
+                    # st.write("Selected country's risk free rate")
+                    # st.write(country_risk_free_rate)
+                    # st.write("Country Risk Free Rate = USA 10 Years Bond - Country Default Spread")
+                    
+                    listd = [country_10years_bond, usa_10years_bond,country_default_spread_usd,country_risk_free_rate]
+                    return listd
+                    
+                except:
+                    st.write(country_option + "failed!")
+                    pass
+
+            # Scrape Countries 10 years government bond rates
+            import pandas as pd
+            import numpy as np
+            countries_10_years_bond_rate = pd.read_html("http://www.worldgovernmentbonds.com/", header=0)[1]
+            countries_10_years_bond_rate.rename(columns={"Unnamed: 0":"Nan","Unnamed: 1":"country_name","Rating":"rating","10Y Bond":"10y_bond","10Y Bond.1":"10y_bond_1","Bank":"bank", "Spread vs":"spread_vs", "Spread vs.1":"spread_vs_1"},inplace=True)
+            # country_name = countries_10_years_bond_rate['country_name'][1:].tolist() 
+
+            country_data_in_table = []
+            temp_table = []
+
+            if stock.endswith(('.SS', '.SZ')):
+                country_option = ['China']
+            else:
+                country_option = ['United States']
+
+            for country in country_option:
+                temp_table = risk_free_rate(country)
+                temp_table.insert(0,country)
+                country_data_in_table.append(temp_table)
+            
+            colu = ["Country", "10years bond", "USA 10years bond","Country Default Spread", "Risk Free Rate"]
+            inde = range(len(country_option))
+            risk_free_rate_df = pd.DataFrame(data= country_data_in_table,index=inde,columns=colu)
+            # risk_free_rate_df
+
+            # risk_free_rate
+            risk_free_rate = risk_free_rate_df['Risk Free Rate'][0]
+            # st.write(risk_free_rate)
+
+            # selected_country_default_spread
+            selected_country_default_spread = risk_free_rate_df['Country Default Spread'][0]
+            # st.write(selected_country_default_spread)
+
+            # Get quote table
+            try:
+                quote = si.get_quote_table(stock) 
+                # st.write(quote)
             except:
-                st.write('risk free rate failed')
+                st.write('quote table failed')
                 pass
+
+            # Get Beta
+            try:
+                # st.text('Beta')
+                beta = float(quote['Beta (5Y Monthly)'])
+                # st.write(beta)
+            except:
+                pass
+
+            # Get: current_price
+            try:
+                current_price = si.get_live_price(stock)
+                # st.write(stock + ' Current Price')
+                # st.write(current_price)
+            except:
+                st.write(stock + ' current price failed')
+                pass
+
+            # Get Yahoo page
+            def get_page(url):
+            # Set up the request headers that we're going to use, to simulate
+            # a request by the Chrome browser. Simulating a request from a browser
+            # is generally good practice when building a scraper
+                headers = {
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Cache-Control': 'max-age=0',
+                    'Connection': 'close',
+                    'DNT': '1', # Do Not Track Request Header 
+                    'Pragma': 'no-cache',
+                    'Referrer': 'https://google.com',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36'
+                }
+
+                return requests.get(url, headers=headers)
+
+            # yahoo parse rows
+            def parse_rows(table_rows):
+                parsed_rows = []
+
+                for table_row in table_rows:
+                    parsed_row = []
+                    el = table_row.xpath("./div")
+
+                    none_count = 0
+
+                    for rs in el:
+                        try:
+                            (text,) = rs.xpath('.//span/text()[1]')
+                            parsed_row.append(text)
+                        except ValueError:
+                            parsed_row.append(np.NaN)
+                            none_count += 1
+
+                    if (none_count < 4):
+                        parsed_rows.append(parsed_row)
+                        
+                return pd.DataFrame(parsed_rows)
+
+            # yahoo clean data
+            def clean_data(df):
+                df = df.set_index(0) # Set the index to the first column: 'Period Ending'.
+                df = df.transpose() # Transpose the DataFrame, so that our header contains the account names
+                
+                # Rename the "Breakdown" column to "Date"
+                cols = list(df.columns)
+                cols[0] = 'Date'
+                df = df.set_axis(cols, axis='columns', inplace=False)
+                
+                # numeric_columns = list(df.columns)[1::] # Take all columns, except the first (which is the 'Date' column)
+
+                for column_index in range(1, len(df.columns)): # Take all columns, except the first (which is the 'Date' column)
+                    df.iloc[:,column_index] = df.iloc[:,column_index].str.replace(',', '') # Remove the thousands separator
+                    df.iloc[:,column_index] = df.iloc[:,column_index].astype(np.float64) # Convert the column to float64
+                    
+                return df
+
+            # yahoo scrape table
+            def scrape_table(url):
+                # Fetch the page that we're going to parse
+                page = get_page(url)
+
+                # Parse the page with LXML, so that we can start doing some XPATH queries
+                # to extract the data that we want
+                tree = html.fromstring(page.content)
+
+                # Fetch all div elements which have class 'D(tbr)'
+                table_rows = tree.xpath("//div[contains(@class, 'D(tbr)')]")
+                
+                # Ensure that some table rows are found; if none are found, then it's possible
+                # that Yahoo Finance has changed their page layout, or have detected
+                # that you're scraping the page.
+                assert len(table_rows) > 0
+                
+                df = parse_rows(table_rows)
+                df = clean_data(df)
+                    
+                return df
+
             # get balance sheet
             try:
                 df_balance_sheet = scrape_table('https://finance.yahoo.com/quote/' + stock + '/balance-sheet?p=' + stock)
@@ -317,146 +388,27 @@ with fundamental_data:
                 st.write(stock + ' cash flow statement failed')
                 pass
 
-            # Get quote table
+            # Get: ttm_cashflow
+            # ttm_cashflow = free cash flow / number of share outstanding
+            # 1) ttm_cashflow = operating cash flow - capital expenditure
+            # 2) ttm_cashflow = sales revenue - (operating costs + taxes) - required investments in operating capital
+            # 3) ttm_cashflow = net operating profit after taxes - net investment in operating capital
+
             try:
-                quote = si.get_quote_table(stock) 
-                # st.write(quote)
+                free_cash_flow = float(df_cash_flow['Free Cash Flow'][0])
+                ordinary_shares_number = float(df_balance_sheet['Ordinary Shares Number'][0])
+                ttm_cashflow = free_cash_flow / ordinary_shares_number
+                # st.write(stock + ' ttm cashflow')
+                # st.write(ttm_cashflow)
             except:
-                st.write('quote table failed')
+                st.write(stock + ' ttm cashflow failed')
                 pass
 
-            # Get Beta
-            try:
-                # st.text('Beta')
-                beta = float(quote['Beta (5Y Monthly)'])
-                # st.write(beta)
-            except:
-                pass
-
-            # get Market Cap
-            try:
-                # st.write('Market Cap')
-                mc = str(quote['Market Cap'])
-                if mc[-1] == 'T':
-                    fmc = float(mc.replace('T',''))
-                    marketCap = fmc*1000000000000
-                    # st.write(marketCap)
-                elif mc[-1] == 'B':
-                    fmc = float(mc.replace('B',''))
-                    marketCap = fmc*1000000000
-                    # st.write(marketCap)
-                elif mc[-1] == 'M':
-                    fmc = float(mc.replace('M',''))
-                    marketCap = fmc*1000000
-                    # st.write(marketCap) 
-            except:
-                pass
-
-            # Get Total Debt
-            try:
-                Total_Debt = df_balance_sheet['Total Debt'][0]
-                # st.write(stock + ' Total Debt')
-                # st.write(Total_Debt)
-            except:
-                st.write(stock + ' Total Debt Failed!')
-                pass
-
-            # Calculate Weight of Equity
-            try:
-                Weight_of_Equity = marketCap / (marketCap + Total_Debt)
-                # st.write(stock + ' Weight of Equity')
-                # st.write(Weight_of_Equity)
-            except:
-                st.write(stock + ' Weight of Equity Failed!')
-                pass 
-
-            # Calculate Weight of Debt
-            try:
-                Weight_of_Debt = Total_Debt / (marketCap + Total_Debt)
-                # st.write(stock + ' Weight of Debt')
-                # st.write(Weight_of_Debt)                
-            except:
-                st.write(stock + ' Weight of Debt Failed!')
-                pass
-
-            # Get Interest Expense  
-            try:
-                Interest_Expenses = df_income_statement['Interest Expense'][0]
-                # st.write(stock + ' Interest Expense')
-                # st.write(Interest_Expenses)
-            except:
-                st.write(stock + ' Interest Expense Failed!')
-                pass
-
-            # Get Income Tax Expense
-            try:
-                Income_Tax_Expense = df_income_statement['Tax Provision'][0]
-                # st.write(stock + ' Income_Tax_Expense')
-                # st.write(Income_Tax_Expense)                
-            except:
-                st.write(stock + ' Income Tax Expense Failed!')
-                pass 
-
-            # Get Income Before Tax
-            try:
-                Income_Before_Tax = df_income_statement['Pretax Income'][0]
-                # st.write(stock + ' Income_Before_Tax')
-                # st.write(Income_Before_Tax)                
-            except:
-                st.write(stock + ' Income_Before_Tax Failed')
-                pass 
-
-            # Calculate effective tax rate
-            try:
-                Effective_Tax_Rate = Income_Tax_Expense / Income_Before_Tax
-                # st.write(stock + ' Effective Tax Rate')
-                # st.write(Effective_Tax_Rate)
-            except:
-                st.write(stock + ' Effective Tax Rate Failed')
-                pass
-
-            # Calculate: Cost of Debt = Interest Expenses / Total Debt
-            try:
-                Cost_of_Debt = Interest_Expenses / Total_Debt
-                # st.write(stock + ' Cost of Debt')
-                # st.write(Cost_of_Debt)
-            except:
-                st.write(stock + ' Cost of Debt Failed')
-                pass
-
-            # Cost of Debt(1-t) = Cost of Debt * (1 - Effective Tax Rate)
-            try:
-                Cost_of_Debt_1t = Cost_of_Debt * (1 - Effective_Tax_Rate)
-                # st.write(stock + ' Cost of Debt(1-t)')
-                # st.write(Cost_of_Debt_1t)
-            except:
-                st.write(stock + ' Cost of Debt(1-t) Failed')
-                pass 
-            
-            # Interest Coverage Ratio (Estimating Synthetic Ratings) = EBIT / Interest Expenses
-            try:
-                Interest_Coverage_Ratio = df_income_statement['EBIT'][0] / Interest_Expenses
-                # st.write(stock + ' Interest Coverage Ratio')
-                # st.write(Interest_Coverage_Ratio)
-            except:
-                st.write(stock + ' Interest Coverage Ratio Failed')
-                pass
-
-            # Calculate: Market Return = [(Ending Price - Beginning Price) / (Beginning Price)] + [(Dividend) / (Begining Price)] 
-            
-            # Calculate: Cost of Equity = Risk Free Rate + Beta(Market Return - Risk Free Rate)
-
-            # Discount Rate (WACC)
-            try:
-                Discount_Rate_WACC = (Weight_of_Equity * Cost_of_Equity) + (Weight_of_Debt * Cost_of_Debt) * (1 - Effective_Tax_Rate)
-            except:
-                pass 
-
-            # Analyst Growth Estimate
+            # Get: analyst_5yrs_estimate_growth_rate
             try:
                 stock = stock.upper()
                 analysts = si.get_analysts_info(stock)
-                analysts_growth_estimate = analysts['Growth Estimates'][stock][5]
+                analysts_growth_estimate = analysts['Growth Estimates'][stock][4]
                 analysts_growth_estimate = float(analysts_growth_estimate.replace("%","")) /100
                 # st.write(stock + ' Analysts Growth Estimate')
                 # st.write(analysts_growth_estimate)
@@ -464,25 +416,7 @@ with fundamental_data:
                 st.write(stock + ' Analysts Growth Estimate Failed')
                 pass
 
-            # Symbol current price
-            try:
-                current_price = si.get_live_price(stock)
-                # st.write(stock + ' Current Price')
-                # st.write(current_price)
-            except:
-                st.write(stock + ' current price failed')
-                pass
-
-            # ttm cash flow
-            try:
-                ttm_cashflow = current_price * risk_free_rate
-                # st.write(stock + ' ttm cashflow')
-                # st.write(ttm_cashflow)
-            except:
-                st.write(stock + ' ttm cashflow failed')
-                pass
-
-            # projected cashflow
+            # Calculate: projected_5yrs_cashflow
             try:
                 years = [1,2,3,4,5]
                 futurefreecashflow = []
@@ -495,7 +429,7 @@ with fundamental_data:
                 st.write(stock + ' projected cashflow failed')
                 pass
 
-            # Expected Return on symbol
+            # Calculate: expected_returns
             try:
                 from scipy import optimize
 
@@ -510,8 +444,8 @@ with fundamental_data:
             except:
                 st.write(stock + ' Expected Return on Stock failed')
                 pass
-            
-            # Implied Equity Risk Premium
+
+            # Calculate: implied_equity_risk_premium
             try:
                 implied_equity_risk_premium = expected_return_on_stock - risk_free_rate
                 # st.write(stock + ' Implied Equity Risk Premium')
@@ -520,23 +454,203 @@ with fundamental_data:
                 st.write(stock + ' implied equity rick premium failed')
                 pass 
 
-            dcf_list = [implied_equity_risk_premium]
+            # Calculate: cost_of_equity (CAPM) = Risk Free Rate + beta * (Market Premium - Risk Free Rate)
+            try:
+                cost_of_equity = risk_free_rate + beta * (Market Premium - risk_free_rate)
+            except:
+                pass
+
+            # Get: market_cap
+            try:
+                # st.write('Market Cap')
+                mc = str(quote['Market Cap'])
+                if mc[-1] == 'T':
+                    fmc = float(mc.replace('T',''))
+                    market_cap = fmc*1000000000000
+                    # st.write(marketCap)
+                elif mc[-1] == 'B':
+                    fmc = float(mc.replace('B',''))
+                    market_cap = fmc*1000000000
+                    # st.write(marketCap)
+                elif mc[-1] == 'M':
+                    fmc = float(mc.replace('M',''))
+                    market_cap = fmc*1000000
+                    # st.write(marketCap) 
+            except:
+                pass
+
+            # Get: total_debts
+            try:
+                total_debt = df_balance_sheet['Total Debt'][0]
+                # st.write(stock + ' Total Debt')
+                # st.write(Total_Debt)
+            except:
+                st.write(stock + ' Total Debt Failed!')
+                pass
+
+            # Calculate: total_equity
+            try:
+                total_equity = market_cap - total_debt
+                # st.write(stock + ' Total equity')
+                # st.write(total_equity)
+            except:
+                st.write(stock + ' Total equity failled')
+                pass 
+
+            # Calculate: weighted_equity
+            try:
+                weight_equity = market_cap / (market_cap + total_debt)
+                # st.write(stock + ' Weight of Equity')
+                # st.write(Weight_of_Equity)
+            except:
+                st.write(stock + ' Weight of Equity Failed!')
+                pass 
+
+            # Get: interest_expenses
+            try:
+                interest_expenses = df_income_statement['Interest Expense'][0]
+                # st.write(stock + ' Interest Expense')
+                # st.write(Interest_Expenses)
+            except:
+                # st.write(stock + ' Interest Expense Failed!')
+                pass
+
+            # Get: ebit
+            try:
+                ebit = df_income_statement['EBIT'][0]
+                # st.write(stock + ' ebit')
+                # st.write(ebit)
+            except:
+                st.write(stock + ' ebit failed')
+                pass
+
+            # Calculate: interest_coverage_ratio (Estimating Synthetic Ratings) = ebit / interest_expense
+            try:
+                interest_coverage_ratio = ebit / interest_expenses
+                # st.write(stock + ' Interest Coverage Ratio')
+                # st.write(Interest_Coverage_Ratio)
+            except:
+                st.write(stock + ' Interest Coverage Ratio Failed')
+                pass
+
+            # Get: company_default_spread_table for interest_coverage_ratio
+            try:
+                import pandas as pd
+                import ssl
+                import numpy as np
+                ssl._create_default_https_context = ssl._create_unverified_context
+                ratings = pd.read_html("https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ratings.html", header=0)
+                ratings_data = np.array(ratings)
+
+                ratings_table = []
+
+                for rating in ratings_data:
+                    for rating_data in rating:
+                        ratings_table.append(rating_data)
+
+                colu = ["Item1", "Item2", "Item3","Item4"]
+
+                inde = range(len(ratings_table))
+
+                rat = pd.DataFrame(data= ratings_table,index=inde,columns=colu)
+
+                # st.write(rat)
+                score = interest_coverage_ratio
+                match = (rat['Item1'] <= score) & (rat['Item2'] > score)
+                company_default_spread = float(rat['Item4'][match].values[0].replace("%","")) / 100
+                # st.write(company_default_spread)
+            except:
+                pass
+
+            # Calculate: cost_of_debt = risk_free_rate + [2/3 * (selected_country_default_spread)] + company_default_spread
+            try:
+                cost_of_debt = risk_free_rate + [2/3 * (selected_country_default_spread)] + company_default_spread
+                # st.write(stock + ' cost_of_debt')
+                # st.write(cost_of_debt)
+            except:
+                st.write(stock + ' cost_of_debt Failed')
+                pass 
+
+            # Get: income_tax_expense
+            try:
+                income_tax_expense = df_income_statement['Tax Provision'][0]
+                # st.write(stock + ' Income_Tax_Expense')
+                # st.write(Income_Tax_Expense)                
+            except:
+                st.write(stock + ' Income Tax Expense Failed!')
+                pass 
+
+            # Get: income_before_tax
+            try:
+                income_before_tax = df_income_statement['Pretax Income'][0]
+                # st.write(stock + ' Income_Before_Tax')
+                # st.write(Income_Before_Tax)                
+            except:
+                st.write(stock + ' Income_Before_Tax Failed')
+                pass 
+
+            # Calculate: effective_tax_rate
+            try:
+                effective_tax_rate = income_tax_expense / income_before_tax
+                # st.write(stock + ' Effective Tax Rate')
+                # st.write(Effective_Tax_Rate)
+            except:
+                st.write(stock + ' Effective Tax Rate Failed')
+                pass
+
+            # Calculate: cost_of_debt = interest_expenses / total_debt
+            try:
+                cost_of_debt = interest_expenses / total_debt
+                # st.write(stock + ' Cost of Debt')
+                # st.write(Cost_of_Debt)
+            except:
+                st.write(stock + ' Cost of Debt Failed')
+                pass
+
+            # Calculate: cost_of_debt_1-t
+            try:
+                cost_of_debt_1t = cost_of_debt * (1 - effective_tax_rate)
+                # st.write(stock + ' Cost of Debt(1-t)')
+                # st.write(Cost_of_Debt_1t)
+            except:
+                st.write(stock + ' Cost of Debt(1-t) Failed')
+                pass 
+
+            # Calculate: weighted_debt
+            try:
+                weight_debt = total_debt / (market_cap + total_debt)
+                # st.write(stock + ' Weight of Debt')
+                # st.write(Weight_of_Debt)                
+            except:
+                st.write(stock + ' Weight of Debt Failed!')
+                pass
+
+            # Calculate: discount_rate_wacc = (weight_debt * cost_of_debt_1t) + weight_equity * cost_of_equity)
+            try:
+                discount_rate_wacc = (weight_debt * cost_of_debt_1t) + weight_equity * cost_of_equity)
+
+            except:
+                pass
+
+            dcf_list = [total_debt, total_equity, weight_equity,interest_expenses, ebit,interest_coverage_ratio]
             return dcf_list
 
         except:
-            st.write('dcf_valuation failed')
-            pass
-    
+            pass    
+
     dcf_table = []
-    temp_table = []
+    dcf_temp_table = []
 
     for stock in selected_option:
-        temp_table = dcf_valuation(stock)
-        temp_table.insert(0, stock)
-        dcf_table.append(temp_table)
+        dcf_temp_table = dcf_valuation(stock)
+        dcf_temp_table.insert(0, stock)
+        dcf_table.append(dcf_temp_table)
 
-    dcf_column_name=['Symbol', 'Implied Equity Risk Piremium']
+    dcf_column_name=['Symbol', 'total_debt','total_equity','weight_equity','interest_expenses','ebit','interest_coverage_ratio']
     dcf_index = range(len(selected_option))
     dcf_df = pd.DataFrame(data=dcf_table, index=dcf_index,columns=dcf_column_name)
     with st.expander(" DCF Valuation", expanded=True):
         st.table(dcf_df)
+
+
+    
