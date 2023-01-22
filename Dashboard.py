@@ -245,16 +245,19 @@ with tab3:
 
             # risk_free_rate
             risk_free_rate = risk_free_rate_df['Risk Free Rate'][0]
-            # st.write(risk_free_rate)
+            st.write(stock + ' risk_free_rate')
+            st.write(risk_free_rate)
 
-            # selected_country_default_spread
-            selected_country_default_spread = risk_free_rate_df['Country Default Spread'][0]
-            # st.write(selected_country_default_spread)
+            # country_default_spread
+            country_default_spread = risk_free_rate_df['Country Default Spread'][0]
+            st.write(stock + ' country_default_spread')
+            st.write(country_default_spread)
 
             # Get quote table
             try:
                 quote = si.get_quote_table(stock) 
-                # st.write(quote)
+                st.write(stock + ' quote table')
+                st.write(quote)
             except:
                 st.write('quote table failed')
                 pass
@@ -263,15 +266,16 @@ with tab3:
             try:
                 # st.text('Beta')
                 beta = float(quote['Beta (5Y Monthly)'])
-                # st.write(beta)
+                st.write(stock + ' beta')
+                st.write(beta)
             except:
                 pass
 
             # Get: current_price
             try:
                 current_price = si.get_live_price(stock)
-                # st.write(stock + ' Current Price')
-                # st.write(current_price)
+                st.write(stock + ' Current Price')
+                st.write(current_price)
             except:
                 st.write(stock + ' current price failed')
                 pass
@@ -362,8 +366,8 @@ with tab3:
             try:
                 df_balance_sheet = scrape_table('https://finance.yahoo.com/quote/' + stock + '/balance-sheet?p=' + stock)
                 df_balance_sheet = df_balance_sheet.set_index('Date')
-                # st.write(stock + ' Balance Sheet')
-                # df_balance_sheet
+                st.write(stock + ' Balance Sheet')
+                df_balance_sheet
             except:
                 st.write(stock + ' balance sheet failed')
                 pass 
@@ -372,8 +376,8 @@ with tab3:
             try:
                 df_income_statement = scrape_table('https://finance.yahoo.com/quote/' + stock + '/financials?p=' + stock)
                 df_income_statement = df_income_statement.set_index('Date')
-                # st.write(stock + ' Income Statement')
-                # df_income_statement
+                st.write(stock + ' Income Statement')
+                df_income_statement
             except:
                 st.write(stock + ' income statement failed')
                 pass 
@@ -382,8 +386,8 @@ with tab3:
             try:
                 df_cash_flow = scrape_table('https://finance.yahoo.com/quote/' + stock + '/cash-flow?p=' + stock)
                 df_cash_flow = df_cash_flow.set_index('Date')
-                # st.write(stock + ' Cash Flow Statement')
-                # df_cash_flow
+                st.write(stock + ' Cash Flow Statement')
+                df_cash_flow
             except:
                 st.write(stock + ' cash flow statement failed')
                 pass
@@ -398,10 +402,10 @@ with tab3:
                 free_cash_flow = float(df_cash_flow['Free Cash Flow'][0])
                 ordinary_shares_number = float(df_balance_sheet['Ordinary Shares Number'][0])
                 ttm_cashflow = free_cash_flow / ordinary_shares_number
-                # st.write(stock + ' ttm cashflow')
-                # st.write(ttm_cashflow)
+                st.write(stock + ' ttm_cashflow')
+                st.write(ttm_cashflow)
             except:
-                st.write(stock + ' ttm cashflow failed')
+                st.write(stock + ' ttm_cashflow failed')
                 pass
 
             # Get: analyst_5yrs_estimate_growth_rate
@@ -410,23 +414,23 @@ with tab3:
                 analysts = si.get_analysts_info(stock)
                 analysts_growth_estimate = analysts['Growth Estimates'][stock][4]
                 analysts_growth_estimate = float(analysts_growth_estimate.replace("%","")) /100
-                # st.write(stock + ' Analysts Growth Estimate')
-                # st.write(analysts_growth_estimate)
+                st.write(stock + ' analysts_growth_estimate')
+                st.write(analysts_growth_estimate)
             except:
-                st.write(stock + ' Analysts Growth Estimate Failed')
+                st.write(stock + ' analysts_growth_estimate Failed')
                 pass
 
-            # Calculate: projected_5yrs_cashflow
+            # Calculate: futurefreecashflow
             try:
                 years = [1,2,3,4,5]
                 futurefreecashflow = []
                 for year in years:
                     cashflow = ttm_cashflow * (1 + analysts_growth_estimate)**year
                     futurefreecashflow.append(cashflow)
-                # st.write(stock + ' projected cashflow statement')
-                # st.write(futurefreecashflow)
+                st.write(stock + ' futurefreecashflow')
+                st.write(futurefreecashflow)
             except:
-                st.write(stock + ' projected cashflow failed')
+                st.write(stock + ' futurefreecashflow failed')
                 pass
 
             # Calculate: expected_returns
@@ -438,88 +442,92 @@ with tab3:
                     return futurefreecashflow[0]/r1 +  futurefreecashflow[1]/r1**2 + futurefreecashflow[2]/r1**3 + futurefreecashflow[3]/r1**4 + futurefreecashflow[4]/r1**5 * (1 + (1+risk_free_rate)/(r-risk_free_rate)) - current_price
 
                 roots = optimize.root(fun, [.1])
-                expected_return_on_stock = float(roots.x)
-                # st.write(stock + ' Expected Return on Stock')
-                # st.write(expected_return_on_stock)
+                expected_returns = float(roots.x)
+                st.write(stock + ' expected_returns')
+                st.write(expected_returns)
             except:
-                st.write(stock + ' Expected Return on Stock failed')
+                st.write(stock + ' expected_returns failed')
                 pass
 
             # Calculate: implied_equity_risk_premium
             try:
-                implied_equity_risk_premium = expected_return_on_stock - risk_free_rate
-                # st.write(stock + ' Implied Equity Risk Premium')
-                # st.write(implied_equity_risk_premium)
+                implied_equity_risk_premium = expected_returns - risk_free_rate
+                st.write(stock + ' implied_equity_risk_premium')
+                st.write(implied_equity_risk_premium)
             except:
-                st.write(stock + ' implied equity rick premium failed')
+                st.write(stock + ' implied_equity_risk_premium failed')
                 pass 
 
             # Calculate: cost_of_equity (CAPM) = Risk Free Rate + beta * (Market Premium - Risk Free Rate)
             try:
-                cost_of_equity = risk_free_rate + beta * (Market Premium - risk_free_rate)
+                cost_of_equity = risk_free_rate + beta * (implied_equity_risk_premium)
+                st.write(stock + ' cost_of_equity')
+                st.write(cost_of_equity)
             except:
+                st.write(stock + ' cost_of_equity failed')
                 pass
 
             # Get: market_cap
             try:
-                # st.write('Market Cap')
+                st.write('market_cap')
                 mc = str(quote['Market Cap'])
                 if mc[-1] == 'T':
                     fmc = float(mc.replace('T',''))
                     market_cap = fmc*1000000000000
-                    # st.write(marketCap)
+                    st.write(market_cap)
                 elif mc[-1] == 'B':
                     fmc = float(mc.replace('B',''))
                     market_cap = fmc*1000000000
-                    # st.write(marketCap)
+                    st.write(market_cap)
                 elif mc[-1] == 'M':
                     fmc = float(mc.replace('M',''))
                     market_cap = fmc*1000000
-                    # st.write(marketCap) 
+                    st.write(market_cap) 
             except:
+                st.write(stock + ' market_cap failed')
                 pass
 
             # Get: total_debts
             try:
                 total_debt = df_balance_sheet['Total Debt'][0]
-                # st.write(stock + ' Total Debt')
-                # st.write(Total_Debt)
+                st.write(stock + ' total_debt')
+                st.write(total_debt)
             except:
-                st.write(stock + ' Total Debt Failed!')
+                st.write(stock + ' total_debt Failed!')
                 pass
 
             # Calculate: total_equity
             try:
                 total_equity = market_cap - total_debt
-                # st.write(stock + ' Total equity')
-                # st.write(total_equity)
+                st.write(stock + ' total_equity')
+                st.write(total_equity)
             except:
-                st.write(stock + ' Total equity failled')
+                st.write(stock + ' total_equity failed')
                 pass 
 
             # Calculate: weighted_equity
             try:
                 weight_equity = market_cap / (market_cap + total_debt)
-                # st.write(stock + ' Weight of Equity')
-                # st.write(Weight_of_Equity)
+                st.write(stock + ' weight_equity')
+                st.write(weight_equity)
             except:
-                st.write(stock + ' Weight of Equity Failed!')
+                st.write(stock + ' weight_equity Failed!')
                 pass 
 
             # Get: interest_expenses
             try:
                 interest_expenses = df_income_statement['Interest Expense'][0]
-                # st.write(stock + ' Interest Expense')
-                # st.write(Interest_Expenses)
+                st.write(stock + ' interest_expenses')
+                st.write(interest_expenses)
             except:
-                # st.write(stock + ' Interest Expense Failed!')
+                st.write(stock + ' interest_expenses Failed!')
                 pass
 
             # Get: ebit
             try:
                 ebit = df_income_statement['EBIT'][0]
-                # st.write(stock + ' ebit')
-                # st.write(ebit)
+                st.write(stock + ' ebit')
+                st.write(ebit)
             except:
                 st.write(stock + ' ebit failed')
                 pass
@@ -527,10 +535,10 @@ with tab3:
             # Calculate: interest_coverage_ratio (Estimating Synthetic Ratings) = ebit / interest_expense
             try:
                 interest_coverage_ratio = ebit / interest_expenses
-                # st.write(stock + ' Interest Coverage Ratio')
-                # st.write(Interest_Coverage_Ratio)
+                st.write(stock + ' interest_coverage_ratio')
+                st.write(interest_coverage_ratio)
             except:
-                st.write(stock + ' Interest Coverage Ratio Failed')
+                st.write(stock + ' interest_coverage_ratio Failed')
                 pass
 
             # Get: company_default_spread_table for interest_coverage_ratio
@@ -558,15 +566,17 @@ with tab3:
                 score = interest_coverage_ratio
                 match = (rat['Item1'] <= score) & (rat['Item2'] > score)
                 company_default_spread = float(rat['Item4'][match].values[0].replace("%","")) / 100
-                # st.write(company_default_spread)
+                st.write(stock + ' company_default_spread')
+                st.write(company_default_spread)
             except:
+                st.write(stock + ' company_default_spread failed')
                 pass
 
-            # Calculate: cost_of_debt = risk_free_rate + [2/3 * (selected_country_default_spread)] + company_default_spread
+            # Calculate: cost_of_debt = risk_free_rate + [2/3 * (country_default_spread)] + company_default_spread
             try:
-                cost_of_debt = risk_free_rate + [2/3 * (selected_country_default_spread)] + company_default_spread
-                # st.write(stock + ' cost_of_debt')
-                # st.write(cost_of_debt)
+                cost_of_debt = (risk_free_rate + [2/3 * (country_default_spread)] + company_default_spread)[0]
+                st.write(stock + ' cost_of_debt')
+                st.write(cost_of_debt)
             except:
                 st.write(stock + ' cost_of_debt Failed')
                 pass 
@@ -574,65 +584,123 @@ with tab3:
             # Get: income_tax_expense
             try:
                 income_tax_expense = df_income_statement['Tax Provision'][0]
-                # st.write(stock + ' Income_Tax_Expense')
-                # st.write(Income_Tax_Expense)                
+                st.write(stock + ' income_tax_expense')
+                st.write(income_tax_expense)                
             except:
-                st.write(stock + ' Income Tax Expense Failed!')
+                st.write(stock + ' income_tax_expense Failed!')
                 pass 
 
             # Get: income_before_tax
             try:
                 income_before_tax = df_income_statement['Pretax Income'][0]
-                # st.write(stock + ' Income_Before_Tax')
-                # st.write(Income_Before_Tax)                
+                st.write(stock + ' income_before_tax')
+                st.write(income_before_tax)                
             except:
-                st.write(stock + ' Income_Before_Tax Failed')
+                st.write(stock + ' income_before_tax Failed')
                 pass 
 
             # Calculate: effective_tax_rate
             try:
                 effective_tax_rate = income_tax_expense / income_before_tax
-                # st.write(stock + ' Effective Tax Rate')
-                # st.write(Effective_Tax_Rate)
+                st.write(stock + ' effective_tax_rate')
+                st.write(effective_tax_rate)
             except:
-                st.write(stock + ' Effective Tax Rate Failed')
+                st.write(stock + ' effective_tax_rate Failed')
                 pass
 
-            # Calculate: cost_of_debt = interest_expenses / total_debt
+            # Calculate: cost_of_debt = (risk_free_rate + ((2/3) * country_default_spread) + company_default_spread)
             try:
-                cost_of_debt = interest_expenses / total_debt
-                # st.write(stock + ' Cost of Debt')
-                # st.write(Cost_of_Debt)
+                cost_of_debt = (risk_free_rate + ((2/3) * country_default_spread) + company_default_spread)
+                st.write(stock + ' cost_of_debt')
+                st.write(cost_of_debt)
             except:
-                st.write(stock + ' Cost of Debt Failed')
+                st.write(stock + ' cost_of_debt Failed')
                 pass
 
             # Calculate: cost_of_debt_1-t
             try:
                 cost_of_debt_1t = cost_of_debt * (1 - effective_tax_rate)
-                # st.write(stock + ' Cost of Debt(1-t)')
-                # st.write(Cost_of_Debt_1t)
+                st.write(stock + ' cost_of_debt_1t')
+                st.write(cost_of_debt_1t)
             except:
-                st.write(stock + ' Cost of Debt(1-t) Failed')
+                st.write(stock + ' cost_of_debt_1t Failed')
                 pass 
 
             # Calculate: weighted_debt
             try:
                 weight_debt = total_debt / (market_cap + total_debt)
-                # st.write(stock + ' Weight of Debt')
-                # st.write(Weight_of_Debt)                
+                st.write(stock + ' weight_debt')
+                st.write(weight_debt)                
             except:
-                st.write(stock + ' Weight of Debt Failed!')
+                st.write(stock + ' weight_debt Failed!')
                 pass
 
             # Calculate: discount_rate_wacc = (weight_debt * cost_of_debt_1t) + weight_equity * cost_of_equity)
             try:
-                discount_rate_wacc = (weight_debt * cost_of_debt_1t) + weight_equity * cost_of_equity)
-
+                discount_rate_wacc = (weight_debt * cost_of_debt_1t) + (weight_equity * cost_of_equity)
+                st.write(stock + ' discount_rate_wacc')
+                st.write(discount_rate_wacc)
             except:
+                st.write(stock + ' discount_rate_wacc failed')
                 pass
 
-            dcf_list = [total_debt, total_equity, weight_equity,interest_expenses, ebit,interest_coverage_ratio]
+            # Calculate: terminal_value
+            try:
+                discountfactor = []
+
+                terminal_value = ttm_cashflow * (1+risk_free_rate) / (discount_rate_wacc - risk_free_rate)
+                st.write(stock + ' terminal_value ')
+                st.write(terminal_value)  
+            except:
+                st.write(stock + ' terminal_value failed')
+                pass
+
+            # Calculate: futurefreecashflow
+            try:
+                years = [1,2,3,4,5]
+                futurefreecashflow = []
+                for year in years:
+                    cashflow = ttm_cashflow * (1+analysts_growth_estimate)**year
+                    futurefreecashflow.append(cashflow)
+                    discountfactor.append((1 + discount_rate_wacc)**year)
+                st.write(stock + ' futurefreecashflow')
+                st.write(futurefreecashflow)
+            except:
+                st.write(stock + ' futurefreecashflow failed')
+                pass
+
+            # Calculate: discount_future_free_cashflow
+            try:
+                discountedfuturefreecashflow = []
+
+                for i in range(0, len(years)):
+                    discountedfuturefreecashflow.append(futurefreecashflow[i]/discountfactor[i])
+                st.write(stock + 'discountedfuturefreecashflow')
+                st.write(discountedfuturefreecashflow)
+            except:
+                st.write(stock + ' discount_future_free_cashflow failed')
+                pass
+
+            # Calculate: today_value
+            try:
+                today_value = sum(discountedfuturefreecashflow)
+                st.write(stock + ' today_value')
+                st.write(today_value)
+            except:
+                st.write(stock + ' today_value failed')
+                pass
+
+            # Calculate fair_value
+            try:
+                fair_value = today_value * 10000 / ordinary_shares_number
+                st.write(stock + ' fair_value')
+                st.write(fair_value)
+            except:
+                st.write(stock + ' fair_value failed')
+                pass
+
+
+            dcf_list = [current_price, today_value, fair_value]
             return dcf_list
 
         except:
@@ -646,11 +714,8 @@ with tab3:
         dcf_temp_table.insert(0, stock)
         dcf_table.append(dcf_temp_table)
 
-    dcf_column_name=['Symbol', 'total_debt','total_equity','weight_equity','interest_expenses','ebit','interest_coverage_ratio']
+    dcf_column_name=['Symbol', 'Current Price','Today Value','Fair Value']
     dcf_index = range(len(selected_option))
     dcf_df = pd.DataFrame(data=dcf_table, index=dcf_index,columns=dcf_column_name)
     with st.expander(" DCF Valuation", expanded=True):
         st.table(dcf_df)
-
-
-    
